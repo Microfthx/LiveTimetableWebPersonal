@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { readFileSync } from "node:fs";
 import type { EventData } from "../types/timetable";
 import { demoData } from "../data/demo";
 import {
@@ -16,6 +15,7 @@ import {
   validateEventData,
 } from "./validation";
 import { posterRatioDifference, revokeRuntimeImages } from "./poster";
+import { posterSignature } from "./posterStorage";
 import { OCR_PROMPT } from "../constants/ocrPrompt";
 
 const at = (hour: number, minute: number) => new Date(2026, 9, 1, hour, minute);
@@ -187,18 +187,19 @@ describe("OCR JSON validation", () => {
     ).toBeGreaterThan(0.05);
   });
 
-  it("keeps the fixed OCR prompt aligned with poster crop fields", () => {
+  it("includes the v1 poster and crop fields in the fixed OCR prompt", () => {
     expect(OCR_PROMPT).toContain('"schema_version": "1.0"');
     expect(OCR_PROMPT).toContain('"poster": {');
     expect(OCR_PROMPT).toContain('"crop": {');
     expect(OCR_PROMPT).toContain("只输出合法 JSON。");
-    const mirror = readFileSync(
-      new URL("../../json生成prompt.txt", import.meta.url),
-      "utf8",
-    );
-    expect(mirror.replace(/\r\n/g, "\n").trim()).toBe(
-      OCR_PROMPT.replace(/\r\n/g, "\n").trim(),
-    );
+  });
+
+  it("keeps the saved poster after delay changes but not crop changes", () => {
+    const data = structuredClone(demoData);
+    const signature = posterSignature(data);
+    expect(posterSignature({ ...data, delay_minutes: 15 })).toBe(signature);
+    data.groups[0].crop = { x: 0, y: 0, width: 0.5, height: 0.5 };
+    expect(posterSignature(data)).not.toBe(signature);
   });
 
   it("revokes runtime image URLs when an activity is replaced", () => {

@@ -30,24 +30,24 @@
 
 ## 字段与约束
 
-| 路径 | 类型 | 规则 |
-| --- | --- | --- |
-| `schema_version` | string | 必填，当前仅接受 `"1.0"`。 |
-| `event.title` | string | 必填，非空。 |
-| `event.date` | string | 必填，真实日历日期，格式 `YYYY-MM-DD`。 |
-| `event.venue` | string | 可选，地点；缺失时界面显示“演出现场”。 |
-| `event.doors_time` | string | 可选，`HH:mm`，24 小时制。 |
-| `event.start_time` | string | 可选，`HH:mm`；强烈建议 OCR 提供，它也是跨午夜排程的日期锚点。 |
-| `delay_minutes` | integer | 可选，缺失视为 0；可正可负，范围 -1440 到 1440。 |
-| `poster.width`, `poster.height` | nonnegative integer | OCR 输出必填；读取不到原图尺寸时两者都为 0。旧版手工 JSON 可省略 `poster`。若有尺寸，仅比较与上传海报的宽高比，误差超过 5% 警告但不阻止。 |
-| `groups` | array | 必填，至少一组。导入时按演出开始时刻稳定排序。 |
-| `groups[].id` | string | 必填，非空且在活动内唯一。 |
-| `groups[].name` | string | 必填，非空。 |
-| `groups[].start_time` | string | 必填，`HH:mm` 或 `""`（OCR 无法确定）；始终表示**原始**时间。空时间放在时间轴末尾并提示核对。 |
-| `groups[].end_time` | string | 必填，`HH:mm` 或 `""`；时长确定时必须大于 0 且不超过 12 小时。 |
-| `groups[].image_base64` | string | 可选，缺失等同 `""`。只放纯 Base64，不放 `data:` 前缀。空值显示占位图。 |
-| `groups[].image_mime` | string | 可选，默认 `image/jpeg`；支持 `image/jpeg`、`image/png`、`image/webp`、`image/gif`。 |
-| `groups[].crop` | object | OCR 输出必填；旧版手工 JSON 可省略。`x`,`y`,`width`,`height` 是相对于**原始上传海报的 naturalWidth / naturalHeight** 的 0–1 坐标。四项全为 0 表示无法确定，显示占位图；有效矩形的宽高必须大于 0 且不可越界。 |
+| 路径                            | 类型                | 规则                                                                                                                                                                                                         |
+| ------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `schema_version`                | string              | 必填，当前仅接受 `"1.0"`。                                                                                                                                                                                   |
+| `event.title`                   | string              | 必填，非空。                                                                                                                                                                                                 |
+| `event.date`                    | string              | 必填，真实日历日期，格式 `YYYY-MM-DD`。                                                                                                                                                                      |
+| `event.venue`                   | string              | 可选，地点；缺失时界面显示“演出现场”。                                                                                                                                                                       |
+| `event.doors_time`              | string              | 可选，`HH:mm`，24 小时制。                                                                                                                                                                                   |
+| `event.start_time`              | string              | 可选，`HH:mm`；强烈建议 OCR 提供，它也是跨午夜排程的日期锚点。                                                                                                                                               |
+| `delay_minutes`                 | integer             | 可选，缺失视为 0；可正可负，范围 -1440 到 1440。                                                                                                                                                             |
+| `poster.width`, `poster.height` | nonnegative integer | OCR 输出必填；读取不到原图尺寸时两者都为 0。旧版手工 JSON 可省略 `poster`。若有尺寸，仅比较与上传海报的宽高比，误差超过 5% 警告但不阻止。                                                                    |
+| `groups`                        | array               | 必填，至少一组。导入时按演出开始时刻稳定排序。                                                                                                                                                               |
+| `groups[].id`                   | string              | 必填，非空且在活动内唯一。                                                                                                                                                                                   |
+| `groups[].name`                 | string              | 必填，非空。                                                                                                                                                                                                 |
+| `groups[].start_time`           | string              | 必填，`HH:mm` 或 `""`（OCR 无法确定）；始终表示**原始**时间。空时间放在时间轴末尾并提示核对。                                                                                                                |
+| `groups[].end_time`             | string              | 必填，`HH:mm` 或 `""`；时长确定时必须大于 0 且不超过 12 小时。                                                                                                                                               |
+| `groups[].image_base64`         | string              | 可选，缺失等同 `""`。只放纯 Base64，不放 `data:` 前缀。空值显示占位图。                                                                                                                                      |
+| `groups[].image_mime`           | string              | 可选，默认 `image/jpeg`；支持 `image/jpeg`、`image/png`、`image/webp`、`image/gif`。                                                                                                                         |
+| `groups[].crop`                 | object              | OCR 输出必填；旧版手工 JSON 可省略。`x`,`y`,`width`,`height` 是相对于**原始上传海报的 naturalWidth / naturalHeight** 的 0–1 坐标。四项全为 0 表示无法确定，显示占位图；有效矩形的宽高必须大于 0 且不可越界。 |
 
 固定 OCR Prompt 的输出**只有**示例所示字段：不输出 `image_base64` / `image_mime`。网页从用户上传的同一张海报，按归一化 crop 生成临时 Blob 图片 URL，按 `group.id` 绑定到当前活动。为兼容第一阶段数据，手工 JSON 和本地已存活动仍可带 `image_base64` / `image_mime`。不认识的额外字段导入时忽略。OCR 无法确认活动名、日期或团体时间时留空；网页会拒绝缺失活动名或日期的数据，团体时间缺失则在预览提示并允许导入。网页可接受 ChatGPT 包在 ` ```json ... ``` ` 中的合法 JSON。
 
@@ -77,4 +77,4 @@
 
 个人浏览器版将规范化的 `EventData` 和 `delay_minutes` 保存在当前来源（域名加端口）的 `localStorage`。9998 与 9999 端口的数据互不相通；不同浏览器或设备也不会同步。旧版存储数据缺少 `poster` 或 `crop` 时由网页标准化兼容。现场延迟只影响有效时间，不改写 OCR 原始时间。
 
-上传的原始海报和生成的团体缩略图只保存在当前页面内存。裁剪图以 `group.id` 对应的运行时 Blob URL 使用，不写回 OCR JSON，也不持久化。刷新后活动与延迟仍在，但裁剪图会恢复为已有 `image_base64` 或占位图；如需再次生成裁剪图，需重新上传海报并导入。切换活动、替换图片和卸载页面时会回收旧 Blob URL。
+上传的原始海报 Blob 保存在当前浏览器的 IndexedDB，按活动与团体排程、crop 的签名关联；延迟不参与签名。裁剪图仍以 `group.id` 对应的运行时 Blob URL 使用，不写回 OCR JSON 或 `localStorage`。刷新后网页读取已存原海报，按归一化坐标重新生成缩略图；切换活动、替换图片和卸载页面时会回收旧 Blob URL。导入无海报活动或恢复 Demo 时删除旧海报。此前版本未保存过的海报需重新上传一次。

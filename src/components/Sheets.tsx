@@ -633,14 +633,14 @@ export function SettingsSheet({
   onClose,
 }: {
   data: EventData;
-  onRestore: () => void;
+  onRestore: () => Promise<void>;
   onClose: () => void;
 }) {
   const [confirmReset, setConfirmReset] = useState(false);
   const [error, setError] = useState("");
-  const restore = () => {
+  const restore = async () => {
     try {
-      onRestore();
+      await onRestore();
       onClose();
     } catch {
       setError("恢复失败，请检查浏览器存储状态。");
@@ -651,23 +651,41 @@ export function SettingsSheet({
       <div className="settings-detail">
         <span>当前活动</span>
         <strong>{data.event.title}</strong>
-        <small>{data.event.date} · {data.event.venue || "演出现场"}</small>
+        <small>
+          {data.event.date} · {data.event.venue || "演出现场"}
+        </small>
       </div>
       <p className="sheet-description">
-        这是个人浏览器版。活动和现场延迟仅保存在当前浏览器，不会同步到其他设备或 9999 端口的共享版。
+        这是个人浏览器版。活动与延迟保存在此浏览器，原始海报保存在
+        IndexedDB，刷新后会自动恢复团体图片；不会同步到其他设备或 9999
+        端口的共享版。
       </p>
       {!confirmReset ? (
-        <button className="secondary-button" onClick={() => setConfirmReset(true)}>
+        <button
+          className="secondary-button"
+          onClick={() => setConfirmReset(true)}
+        >
           <RotateCcw size={18} /> 恢复 Demo 数据
         </button>
       ) : (
         <div className="reset-confirm">
           <p>这会清除当前浏览器保存的活动和延迟。</p>
-          <button className="secondary-button" onClick={restore}>确认恢复 Demo</button>
-          <button className="text-button" onClick={() => setConfirmReset(false)}>取消</button>
+          <button className="secondary-button" onClick={() => void restore()}>
+            确认恢复 Demo
+          </button>
+          <button
+            className="text-button"
+            onClick={() => setConfirmReset(false)}
+          >
+            取消
+          </button>
         </div>
       )}
-      {error && <p className="form-error" role="alert">{error}</p>}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
     </Sheet>
   );
 }
