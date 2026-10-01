@@ -15,6 +15,7 @@ import { copyTextToClipboard } from "../utils/clipboard";
 import { parseEventJsonDetailed } from "../utils/validation";
 import {
   cropGroupImages,
+  hasUsableCrop,
   posterRatioDifference,
   readPoster,
   revokeRuntimeImages,
@@ -629,25 +630,49 @@ export function PosterHelpSheet({
 
 export function SettingsSheet({
   data,
+  onAttachPoster,
   onRestore,
   onClose,
 }: {
   data: EventData;
+  onAttachPoster: (file: File) => Promise<void>;
   onRestore: () => Promise<void>;
   onClose: () => void;
 }) {
   const [confirmReset, setConfirmReset] = useState(false);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const posterInput = useRef<HTMLInputElement>(null);
+  const attachPoster = async (file?: File) => {
+    if (!file || saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      await onAttachPoster(file);
+      onClose();
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "海报保存失败，请重试。",
+      );
+    } finally {
+      setSaving(false);
+      if (posterInput.current) posterInput.current.value = "";
+    }
+  };
   const restore = async () => {
+    if (saving) return;
+    setSaving(true);
     try {
       await onRestore();
       onClose();
     } catch {
       setError("恢复失败，请检查浏览器存储状态。");
+    } finally {
+      setSaving(false);
     }
   };
   return (
-    <Sheet title="设置" onClose={onClose}>
+    <Sheet title="设置" onClose={() => !saving && onClose()}>
       <div className="settings-detail">
         <span>当前活动</span>
         <strong>{data.event.title}</strong>
@@ -660,9 +685,36 @@ export function SettingsSheet({
         IndexedDB，刷新后会自动恢复团体图片；不会同步到其他设备或 9999
         端口的共享版。
       </p>
+      {hasUsableCrop(data) ? (
+        <>
+          <button
+            className="secondary-button"
+            disabled={saving}
+            onClick={() => posterInput.current?.click()}
+          >
+            <ImageUp size={18} />{" "}
+            {saving ? "正在处理海报…" : "为当前活动补传海报"}
+          </button>
+          <input
+            ref={posterInput}
+            className="visually-hidden"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={(event) => void attachPoster(event.target.files?.[0])}
+          />
+          <p className="sheet-description">
+            已有活动只需补传一次原海报，无需重新粘贴 OCR JSON。
+          </p>
+        </>
+      ) : (
+        <p className="sheet-description">
+          当前活动没有可用的 crop 坐标；如需团体图片，请重新识别并导入海报。
+        </p>
+      )}
       {!confirmReset ? (
         <button
           className="secondary-button"
+          disabled={saving}
           onClick={() => setConfirmReset(true)}
         >
           <RotateCcw size={18} /> 恢复 Demo 数据
@@ -670,7 +722,11 @@ export function SettingsSheet({
       ) : (
         <div className="reset-confirm">
           <p>这会清除当前浏览器保存的活动和延迟。</p>
-          <button className="secondary-button" onClick={() => void restore()}>
+          <button
+            className="secondary-button"
+            disabled={saving}
+            onClick={() => void restore()}
+          >
             确认恢复 Demo
           </button>
           <button

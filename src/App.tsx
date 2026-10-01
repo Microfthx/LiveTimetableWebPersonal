@@ -29,6 +29,7 @@ import { getCurrentPerformance, getNextPerformance } from "./utils/time";
 import { clearEventData, loadEventData, saveEventData } from "./utils/storage";
 import {
   cropGroupImages,
+  posterRatioDifference,
   readPoster,
   revokeRuntimeImages,
   type RuntimeGroupImages,
@@ -137,9 +138,9 @@ export default function App() {
     // Commit storage first: a full localStorage must leave the current activity intact.
     saveEventData(imported);
     assetVersionRef.current++;
+    const file = posterRef.current?.file;
     let posterSaved = true;
     try {
-      const file = posterRef.current?.file;
       if (file) await savePosterBlob(imported, file);
       else await deletePosterBlob();
     } catch {
@@ -151,9 +152,11 @@ export default function App() {
     setData(imported);
     clearPoster();
     setNotice(
-      posterSaved
+      posterSaved && file
         ? `已导入 ${imported.event.title}，海报与活动已保存在此浏览器`
-        : `已导入 ${imported.event.title}，但海报保存失败；刷新后需重新上传`,
+        : posterSaved
+          ? `已导入 ${imported.event.title}，活动已保存在此浏览器`
+          : `已导入 ${imported.event.title}，但海报保存失败；刷新后需重新上传`,
     );
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -167,6 +170,38 @@ export default function App() {
     clearPoster();
     setData(demoData);
     setNotice("已恢复此浏览器的 Demo 数据");
+  };
+  const attachCurrentPoster = async (file: File) => {
+    let source: PosterSource | null = null;
+    let images: RuntimeGroupImages = {};
+    try {
+      source = await readPoster(file);
+      const result = await cropGroupImages(data, source);
+      images = result.images;
+      if (!Object.keys(images).length)
+        throw new Error("没有生成团体图片，请检查海报与裁剪区域。");
+      await savePosterBlob(data, file);
+      const ratio = posterRatioDifference(data, source);
+      assetVersionRef.current++;
+      if (posterRef.current) URL.revokeObjectURL(posterRef.current.url);
+      posterRef.current = source;
+      setPoster(source);
+      source = null;
+      revokeRuntimeImages(runtimeRef.current);
+      runtimeRef.current = images;
+      setRuntimeImages(images);
+      images = {};
+      setNotice(
+        ratio !== null && ratio >= 0.05
+          ? "图片已恢复并保存；上传海报与 OCR 图片比例不同，请检查裁剪位置。"
+          : result.failed.length
+            ? `已恢复部分图片，${result.failed.length} 张裁剪失败。`
+            : "当前活动图片已恢复并保存在此浏览器",
+      );
+    } finally {
+      if (source) URL.revokeObjectURL(source.url);
+      revokeRuntimeImages(images);
+    }
   };
   const scrollToTimetable = () =>
     document
@@ -296,6 +331,7 @@ export default function App() {
         {sheet === "settings" && (
           <SettingsSheet
             data={data}
+            onAttachPoster={attachCurrentPoster}
             onRestore={restore}
             onClose={() => setSheet(null)}
           />

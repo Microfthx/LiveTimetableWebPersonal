@@ -17,7 +17,7 @@ npm run build
 
 活动和延迟只保存在当前浏览器的 `localStorage`。浏览器、设备和端口之间互不共享；9998 个人版与 9999 服务器同步版互不影响。清除网站数据会清除个人时间表。
 
-原始海报保存在当前浏览器的 IndexedDB，不写入 `localStorage` 或 OCR JSON。刷新后网页读取海报并重新生成裁剪图；调整延迟不会重新裁剪。恢复 Demo 会清除已存海报。旧版已导入、但此前未保存的海报无法凭空找回，需要重新上传一次。若浏览器禁用或清除了 IndexedDB、存储空间不足，网页会提示海报保存或恢复失败。OCR JSON 唯一规范是 [docs/DATA_FORMAT.md](docs/DATA_FORMAT.md)。
+原始海报保存在当前浏览器的 IndexedDB，不写入 `localStorage` 或 OCR JSON。刷新后网页读取海报并重新生成裁剪图；调整延迟不会重新裁剪。恢复 Demo 会清除已存海报。旧版已导入、但此前未保存的海报无法凭空找回；若活动已有 crop 坐标，可在设置中“为当前活动补传海报”，无需重新粘贴 OCR JSON。若浏览器禁用或清除了 IndexedDB、存储空间不足，网页会提示海报保存或恢复失败。OCR JSON 唯一规范是 [docs/DATA_FORMAT.md](docs/DATA_FORMAT.md)。
 
 ## 阿里云部署
 
